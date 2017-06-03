@@ -7,20 +7,30 @@
 //
 
 import UIKit
+import Foundation
 import SystemConfiguration
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UITextFieldDelegate{
 
     @IBOutlet weak var resultadoConexion: UITextView!
     @IBOutlet weak var BusquedaISBN: UITextField!
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-    }
+        
+        BusquedaISBN.delegate = self
+          }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+  
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        //delegate method
+        textField.resignFirstResponder()
+         ConexionSincrona()
+        return true
     }
 
     @IBAction func BuscarISBN(_ sender: Any) {
@@ -28,29 +38,11 @@ class ViewController: UIViewController {
         ConexionSincrona()
     }
     
-    func connectedToNetwork() -> Bool {
-        
-        var zeroAddress = sockaddr_in()
-        zeroAddress.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-        zeroAddress.sin_family = sa_family_t(AF_INET)
-        
-        guard let defaultRouteReachability = withUnsafePointer(to: &zeroAddress, {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                SCNetworkReachabilityCreateWithAddress(nil, $0)
-            }
-        }) else {
-            return false
-        }
-        
-        var flags: SCNetworkReachabilityFlags = []
-        if !SCNetworkReachabilityGetFlags(defaultRouteReachability, &flags) {
-            return false
-        }
-        
-        let isReachable = flags.contains(.reachable)
-        let needsConnection = flags.contains(.connectionRequired)
-        
-        return (isReachable && !needsConnection)
+
+    
+    @IBAction func Limpiar(_ sender: Any) {
+        resultadoConexion.text="";
+        BusquedaISBN.text="";
     }
     
     
@@ -59,11 +51,14 @@ class ViewController: UIViewController {
         var isbn:String=BusquedaISBN.text!
         if(isbn.characters.count==0)
             {
-                 showAlertMessage(title: "Warning", message: "You must enter the ISBN of the book", owner: self)
+                 showAlertMessage(title: "Advertencia", message: "Por favor digite el ISBN a buscar", owner: self)
+                
+                return
             }
-        if connectedToNetwork()
+        let urls:String="https://openlibrary.org/api/books?jscmd=data&format=json&bibkeys=ISBN:"+isbn
+        if Reachability.shared.isConnectedToNetwork()
         {
-         let urls:String="https://openlibrary.org/api/books?jscmd=data&format=json&bibkeys=ISBN:"+isbn
+      
         let url=NSURL(string: urls)
         let datos:NSData?=NSData(contentsOf: url! as URL)
 
@@ -72,7 +67,7 @@ class ViewController: UIViewController {
         }
         
         else{
-             showAlertMessage(title: "Error", message: "There are problems connecting to the Internet", owner: self)
+             showAlertMessage(title: "Error", message: "Por favor revise la conexión de internet e intente nuevamente", owner: self)
         }
         
         
@@ -80,7 +75,7 @@ class ViewController: UIViewController {
     
     func showAlertMessage (title: String, message: String, owner:UIViewController) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: UIAlertControllerStyle.actionSheet)
-        alert.addAction(UIAlertAction(title: "Accept", style: UIAlertActionStyle.default, handler:{ (ACTION :UIAlertAction!)in
+        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.default, handler:{ (ACTION :UIAlertAction!)in
         }))
         self.present(alert, animated: true, completion: nil)
     }
